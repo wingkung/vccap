@@ -1,10 +1,26 @@
-var net = require('net');
+
+
+var express = require('express');
+var app = express();
+var server = require('http').createServer(app);
+var io = require('socket.io')(server);
+
 var ac = require('./client');
-var io = require('socket.io')(3000);
+
+var port = process.env.PORT || 3000;
+
+server.listen(port, function () {
+    console.log('Server listening at port %d', port);
+});
+
+app.use(express, function(){
+    express.static(__dirname + '/public')
+});
 
 io.of('/vcc').on('connection', function (socket) {
+
     socket.on('login', function(data){
-        console.log("用户登录:[" + data.tenantId + '-' + data.agentId + "]" + io.transports[socket.id].name );
+        console.log("用户登录:[" + data.tenantId + '-' + data.agentId + "]");
         var client = ac.findClient(data.tenantId, data.agentId);
         if (client){
             client.status(socket);
@@ -71,6 +87,7 @@ io.of('/vcc').on('connection', function (socket) {
     });
 
     socket.on('disconnect', function(){
+        if (socket.cconeClient == undefined) return;
         for (var i in socket.cconeClient.sockets){
             if (socket == socket.cconeClient.sockets[i]){
                 socket.cconeClient.sockets.splice(i, 1);
