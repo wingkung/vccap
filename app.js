@@ -21,26 +21,31 @@ io.of('/vcc').on('connection', function (socket) {
 
     socket.on('login', function(data){
         console.log("用户登录:[" + data.tenantId + '-' + data.agentId + "]");
-        var client = ac.findClient(data.tenantId, data.agentId);
-        if (client){
-            client.status(socket);
-            client.sockets.push(socket);
-            console.log('push ' + socket.id);
+        if (data.tenantId == null || data.agentId == null || data.password == null || data.ext == null ){
+            socket.emit('login', {rtn: false, descr: '参数不完整'});
         }else{
-            var params = {
-                tenantId: data.tenantId,
-                agentId: data.agentId,
-                password: data.password,
-                ext: data.ext,
-                host: '183.56.130.201'
-            };
-            client = new ac.Client(params, function(err){});
-            client.sockets.push(socket);
-            console.log('push ' + socket.id);
-            client.init();
-            ac.clients.push(client);
+            var client = ac.findClient(data.tenantId, data.agentId);
+            if (client){
+                client.status(socket);
+                client.sockets.push(socket);
+                console.log('push ' + socket.id);
+            }else{
+                var params = {
+                    tenantId: data.tenantId,
+                    agentId: data.agentId,
+                    password: data.password,
+                    ext: data.ext,
+                    host: '183.56.130.201'
+                };
+                client = new ac.Client(params, function(err){});
+                client.sockets.push(socket);
+                console.log('push ' + socket.id);
+                client.init();
+                ac.clients.push(client);
+            }
+            socket.cconeClient = client;
         }
-        socket.cconeClient = client;
+
     });
 
     socket.on('dial', function(data){

@@ -1,11 +1,9 @@
 /* client.js */
 
 var net = require('net');
-var async = require('async');
 
 var clients = exports.clients = [];
-var Client = exports.Client = function (params, cb) {
-
+exports.Client = function (params, cb) {
     this.tenantId = params.tenantId;
     this.agentId = params.agentId;
     this.password = params.password;
@@ -26,7 +24,7 @@ var Client = exports.Client = function (params, cb) {
         self.netSocket = net.connect({port: 14600, host: self.host}, function () {
             var md5 = require('crypto').createHash('md5');
             md5.update(self.password)
-            self.send('Login', md5.digest("hex") + ',' + self.ext + ',N')
+            self.send('Login', md5.digest("hex") + ',' + self.ext + ',N');
             console.log(self.tenantId + '-' + self.agentId + ":客户端连接建立");
         });
         self.netSocket.on('data', function (data) {
@@ -35,12 +33,14 @@ var Client = exports.Client = function (params, cb) {
             self.left = "";
             var lines = data.split('\n');
             for (var i in lines) {
-                var line = lines[i]
-                if (line.length > 0) {
-                    if (line[line.length - 1] == "\r") {
-                        self.handle(line.trim());
-                    } else {
-                        self.left = line.trim();
+                if (lines.hasOwnProperty(i)) {
+                    var line = lines[i];
+                    if (line.length > 0) {
+                        if (line[line.length - 1] == "\r") {
+                            self.handle(line.trim());
+                        } else {
+                            self.left = line.trim();
+                        }
                     }
                 }
             }
@@ -65,16 +65,16 @@ var Client = exports.Client = function (params, cb) {
         if (args[0] == 'Login') {
             if (args[1] == "1") {
                 self.cb(null);
-                self.broadcast(self.sockets, 'login', {rtn: true, descr: '登录成功'})
-                self.onScene({scene: "0", ctls: "9216"})
+                self.broadcast(self.sockets, 'login', {rtn: true, descr: '登录成功'});
+                self.onScene({scene: "0", ctls: "9216"});
 
                 clearInterval(self.timer);
                 self.timer = setInterval(function () {
-                    self.netSocket.write('KeepAlive,'+ self.tenantId + "," + self.agentId + "\r\n");
+                    self.netSocket.write('KeepAlive,' + self.tenantId + "," + self.agentId + "\r\n");
                 }, 3000)
             } else {
                 self.cb(new Error('登录失败 ' + args[1]));
-                self.broadcast(self.sockets, 'login', {rtn: true, descr: '登录失败'})
+                self.broadcast(self.sockets, 'login', {rtn: true, descr: '登录失败'});
                 self.destroy();
             }
         } else if (args[0] == 'Dial') {
@@ -94,17 +94,19 @@ var Client = exports.Client = function (params, cb) {
             console.log(args);
             for (var i in args) {
                 if (i == 0) continue;
-                var kv = args[i].split('=');
-                if (kv[0] == 'agentname') {
-                    self.agentName = kv[1];
-                } else if (kv[0] == 'typecode') {
-                    self.typeCode = kv[1];
-                } else if (kv[0] == 'wrapupmode') {
-                    self.wrapupMode = kv[1];
+                if (args.hasOwnProperty(i)) {
+                    var kv = args[i].split('=');
+                    if (kv[0] == 'agentname') {
+                        self.agentName = kv[1];
+                    } else if (kv[0] == 'typecode') {
+                        self.typeCode = kv[1];
+                    } else if (kv[0] == 'wrapupmode') {
+                        self.wrapupMode = kv[1];
+                    }
                 }
             }
             self.broadcast(self.sockets, 'info', {agentName: self.agentName, agentId: self.agentId, ext: self.ext,
-                ext: self.ext, typeCode: self.typeCode, wrapupMode: self.wrapupMode})
+                typeCode: self.typeCode, wrapupMode: self.wrapupMode})
         } else if (args[0] == "Scene") {
             self.onScene({scene: args[1], ctls: args[2]});
         } else if (args[0] == "Hangup") {
@@ -116,7 +118,7 @@ var Client = exports.Client = function (params, cb) {
         self.scene = data.scene;
         self.ctls = data.ctls;
         self.broadcast(self.sockets, 'scene', {scene: self.scene, ctls: self.ctls})
-    }
+    };
 
     this.status = function (socket) {
         var descr = translateState(self.state);
@@ -134,70 +136,69 @@ var Client = exports.Client = function (params, cb) {
     this.logout = function () {
         console.log(self.tenantId + '-' + self.agentId + ":登出");
         self.send('Logout', '');
-    }
+    };
     this.transfer = function (data) {
         console.log(self.tenantId + '-' + self.agentId + ":转移 [" + data.type + "-" + data.target + "]");
         self.send('Transfer', data.type + ',' + data.target);
-    }
+    };
     this.consult = function (data) {
         console.log(self.tenantId + '-' + self.agentId + ":咨询 [" + data.type + "-" + data.target + "]");
         self.send('Consult', data.type + ',' + data.target);
-    }
+    };
     this.hold = function () {
         console.log(self.tenantId + '-' + self.agentId + ":保持");
         self.send('Hold', '');
-    }
+    };
     this.unhold = function () {
         console.log(self.tenantId + '-' + self.agentId + ":取消保持");
         self.send('UnHold', '');
-    }
+    };
     this.consultCancel = function () {
         console.log(self.tenantId + '-' + self.agentId + ":取消咨询");
         self.send('ConsultCancel', '');
-    }
+    };
 
     this.consultBridge = function () {
         console.log(self.tenantId + '-' + self.agentId + ":咨询三方");
         self.send('ConsultBridge', '');
-    }
+    };
     this.consultTransfer = function () {
         console.log(self.tenantId + '-' + self.agentId + ":咨询转移");
         self.send('ConsultTransfer', '');
-    }
+    };
     this.ssi = function () {
         console.log(self.tenantId + '-' + self.agentId + ":保持");
         self.send('Transfer', '3,99');
-    }
+    };
     this.changeState = function (data) {
         self.send('ChangeState', data.state);
-    }
+    };
     this.endWrapup = function () {
         self.send('ChangeState', 0);
-    }
+    };
     this.changeWrapupMode = function (data) {
         self.send('WrapupMode', data.mode);
-    }
+    };
 
     this.changeAdminMode = function (data) {
         self.send('AdminMode', data.mode);
-    }
+    };
 
     this.destroy = function () {
         console.log(self.tenantId + '-' + self.agentId + ":销毁");
         removeClient(self.tenantId, self.agentId);
         clearInterval(self.timer);
-        delete self;
     };
 
     this.broadcast = function (sockets, action, data) {
         console.log(self.tenantId + '-' + self.agentId + ' :发送 (' + action + ')' + JSON.stringify(data));
         for (var i in sockets) {
+            if (!sockets.hasOwnProperty(i)) continue;
             var socket = sockets[i];
             socket.emit(action, data);
         }
     };
 
-    this.cdTimer;
     this.countdown = function () {
         if (self.sockets.length <= 0) {
             console.log(self.tenantId + '-' + self.agentId + ' :无客户端到时开始');
@@ -209,9 +210,9 @@ var Client = exports.Client = function (params, cb) {
             }, 300000);
         }
     }
-}
+};
 
-function translateState (state) {
+function translateState(state) {
     if (state == 1) {
         return "空闲"
     } else if (state == 2) {
@@ -231,33 +232,37 @@ function translateState (state) {
 
 exports.findClient = function (tenantId, agentId) {
     for (var i in clients) {
+        if (!clients.hasOwnProperty(i)) continue;
         var client = clients[i];
         if (tenantId == client.tenantId && agentId == client.agentId) {
             return client;
         }
     }
     return null;
-}
+};
 
 exports.findSClient = function (socket) {
     for (var i in clients) {
+        if (!clients.hasOwnProperty(i)) continue;
         var client = clients[i];
         for (var j in client.sockets) {
+            if (!client.sockets.hasOwnProperty(j)) continue;
             if (socket == client.sockets[j]) {
                 return client;
             }
         }
     }
     return null;
-}
+};
 
 var removeClient = exports.removeClient = function (tenantId, agentId) {
     for (var i in clients) {
+        if (!clients.hasOwnProperty(i)) continue;
         var client = clients[i];
         if (tenantId == client.tenantId && agentId == client.agentId) {
             clients.splice(i, 1);
             break;
         }
     }
-}
+};
 
