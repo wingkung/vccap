@@ -86,6 +86,7 @@ io.of('/vcc').on('connection', function (socket) {
     socket.on('admin_mode', function (data) {
         socket.cconeClient.changeAdminMode(data);
     });
+    
     socket.on('wrapup_mode', function (data) {
         socket.cconeClient.changeWrapupMode(data);
     });
