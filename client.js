@@ -74,7 +74,7 @@ exports.Client = function (params, cb) {
                 }, 3000)
             } else {
                 self.cb(new Error('登录失败 ' + args[1]));
-                self.broadcast(self.sockets, 'login', {rtn: true, descr: '登录失败'});
+                self.broadcast(self.sockets, 'login', {rtn: false, descr: '登录失败'});
                 self.destroy();
             }
         } else if (args[0] == 'Dial') {
@@ -191,7 +191,7 @@ exports.Client = function (params, cb) {
     };
 
     this.broadcast = function (sockets, action, data) {
-        console.log(self.tenantId + '-' + self.agentId + ' :发送 (' + action + ')' + JSON.stringify(data));
+        console.log(self.tenantId + '-' + self.agentId + ':发送 (' + action + ')' + JSON.stringify(data));
         for (var i in sockets) {
             if (!sockets.hasOwnProperty(i)) continue;
             var socket = sockets[i];
@@ -201,7 +201,7 @@ exports.Client = function (params, cb) {
 
     this.countdown = function () {
         if (self.sockets.length <= 0) {
-            console.log(self.tenantId + '-' + self.agentId + ' :无客户端到时开始');
+            console.log(self.tenantId + '-' + self.agentId + ':无客户端到时开始');
             clearTimeout(self.cdTimer);
             self.cdTimer = setTimeout(function () {
                 if (self.sockets.length <= 0) {
