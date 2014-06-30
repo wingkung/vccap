@@ -3,13 +3,12 @@
 var net = require('net');
 
 var clients = exports.clients = [];
-exports.Client = function (params, cb) {
+exports.Client = function (params) {
     this.tenantId = params.tenantId;
     this.agentId = params.agentId;
     this.password = params.password;
     this.ext = params.ext;
     this.host = params.host;
-    this.cb = cb;
     this.sockets = [];
 
     this.left = "";
@@ -23,48 +22,42 @@ exports.Client = function (params, cb) {
     this.init = function () {
         self.netSocket = net.connect({port: 14600, host: self.host}, function () {
             var md5 = require('crypto').createHash('md5');
-            md5.update(self.password)
+            md5.update(self.password);
             self.send('Login', md5.digest("hex") + ',' + self.ext + ',N');
             console.log(self.tenantId + '-' + self.agentId + ":客户端连接建立");
         });
         self.netSocket.on('data', function (data) {
-            console.log(self.tenantId + '-' + self.agentId + ":接收 " + data.toString());
+            //console.log(self.tenantId + '-' + self.agentId + ":接收 " + data.toString());
             data = self.left + data;
             self.left = "";
-            var lines = data.split('\n');
-            for (var i in lines) {
-                if (lines.hasOwnProperty(i)) {
-                    var line = lines[i];
-                    if (line.length > 0) {
-                        if (line[line.length - 1] == "\r") {
-                            self.handle(line.trim());
-                        } else {
-                            self.left = line.trim();
-                        }
-                    }
-                }
+
+            var i = data.indexOf("\r\n");
+            var s = "";
+            while (i > 0){
+                s = data.substr(0, i);
+                self.handle(s.trim());
+                data = data.substr(i+2);
+                i = data.indexOf("\r\n");
             }
+            self.left = data;
         });
         self.netSocket.on('error', function (err) {
             console.log(self.tenantId + '-' + self.agentId + ":客户端连接异常" + err);
-            self.broadcast(self.sockets, 'login', {rtn: false, descr: '连接异常'});
+            self.broadcast(self.sockets, 'neterror', {descr: '连接中断'});
             self.destroy();
-            self.cb(new Error('连接异常'));
         });
         self.netSocket.on('end', function () {
             console.log(self.tenantId + '-' + self.agentId + ":客户端连接断开 (" + self.sockets.length + ")");
-            self.onScene({scene: 0, ctls: 0});
+            self.broadcast(self.sockets, 'end', {descr: '连接断开'});
             self.destroy();
         });
     };
 
     this.handle = function (data) {
-        console.log('handle ' + data);
-
+        console.log(self.tenantId + '-' + self.agentId + ':net接收 ' + data);
         var args = data.split(',');
         if (args[0] == 'Login') {
             if (args[1] == "1") {
-                self.cb(null);
                 self.broadcast(self.sockets, 'login', {rtn: true, descr: '登录成功'});
                 self.onScene({scene: "0", ctls: "9216"});
 
@@ -73,7 +66,6 @@ exports.Client = function (params, cb) {
                     self.netSocket.write('KeepAlive,' + self.tenantId + "," + self.agentId + "\r\n");
                 }, 3000)
             } else {
-                self.cb(new Error('登录失败 ' + args[1]));
                 self.broadcast(self.sockets, 'login', {rtn: false, descr: '登录失败'});
                 self.destroy();
             }
@@ -85,11 +77,12 @@ exports.Client = function (params, cb) {
             }
         } else if (args[0] == 'AgentState') {
             self.state = args[1];
-            var descr = translateState(self.state);
+            self.stateDescr = translateState(self.state);
             if (args.length > 2) {
                 self.subState = args[2];
             }
-            self.broadcast(self.sockets, 'state', {state: self.state, subState: self.subState, descr: descr })
+            self.stateDescr
+            self.broadcast(self.sockets, 'state', {state: self.state, subState: self.subState, stateDescr: self.stateDescr })
         } else if (args[0] == "InitAgent") {
             console.log(args);
             for (var i in args) {
@@ -102,15 +95,23 @@ exports.Client = function (params, cb) {
                         self.typeCode = kv[1];
                     } else if (kv[0] == 'wrapupmode') {
                         self.wrapupMode = kv[1];
+                    } else if (kv[0] == 'adminmode') {
+                        self.adminMode = kv[1];
                     }
                 }
             }
             self.broadcast(self.sockets, 'info', {agentName: self.agentName, agentId: self.agentId, ext: self.ext,
-                typeCode: self.typeCode, wrapupMode: self.wrapupMode})
+                typeCode: self.typeCode, wrapupMode: self.wrapupMode, adminMode: self.adminMode})
         } else if (args[0] == "Scene") {
             self.onScene({scene: args[1], ctls: args[2]});
         } else if (args[0] == "Hangup") {
             self.onScene({scene: 0, ctls: 9216});
+        } else if (args[0] == "Logout"){
+            if (args[1] == 1){
+                self.broadcast(self.sockets, 'logout', {descr: '登出成功'});
+            }else{
+                self.broadcast(self.sockets, 'logout', {descr: '登出失败'});
+            }
         }
     };
 
@@ -122,15 +123,15 @@ exports.Client = function (params, cb) {
 
     this.status = function (socket) {
         var descr = translateState(self.state);
-        socket.emit('status', {agentName: self.agentName, agentId: self.agentId, typeCode: self.typeCode, ext: self.ext,
-            state: self.state, subState: self.subState, stateDescr: descr,
-            scene: self.scene, ctls: self.ctls})
+        this.emit(socket, 'login', {rtn: true, descr: '登录成功'});
+        this.emit(socket, 'status', {agentName: self.agentName, agentId: self.agentId, typeCode: self.typeCode, ext: self.ext,
+            state: self.state, subState: self.subState, stateDescr: descr, wrapupMode: self.wrapupMode, adminMode: self.adminMode,
+            scene: self.scene, ctls: self.ctls});
     };
-
 
     this.dial = function (data) {
         console.log(self.tenantId + '-' + self.agentId + ":呼叫 [" + data.type + "-" + data.target + "]");
-        self.send('Dial', "2" + "," + data.target + ",100001-68205456");
+        self.send('Dial', data.type + "," + data.target + "," + data.code400 + "-" + data.code);
     };
 
     this.logout = function () {
@@ -199,9 +200,14 @@ exports.Client = function (params, cb) {
         }
     };
 
+    this.emit = function(socket, action, data){
+        console.log(self.tenantId + '-' + self.agentId + ':发送 (' + action + ')' + JSON.stringify(data));
+        socket.emit(action, data);
+    };
+
     this.countdown = function () {
         if (self.sockets.length <= 0) {
-            console.log(self.tenantId + '-' + self.agentId + ':无客户端到时开始');
+            console.log(self.tenantId + '-' + self.agentId + ':无客户端倒计时开始');
             clearTimeout(self.cdTimer);
             self.cdTimer = setTimeout(function () {
                 if (self.sockets.length <= 0) {

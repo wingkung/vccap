@@ -35,8 +35,7 @@ io.of('/vcc').on('connection', function (socket) {
                     ext: data.ext,
                     host: '183.56.130.201'
                 };
-                client = new ac.Client(params, function (err) {
-                });
+                client = new ac.Client(params);
                 client.sockets.push(socket);
                 console.log('push ' + socket.id);
                 client.init();
@@ -101,7 +100,11 @@ io.of('/vcc').on('connection', function (socket) {
                 break;
             }
         }
-    })
+    });
+
+    socket.on('error', function(e){
+        console.warn(e);
+    });
 });
 
 
