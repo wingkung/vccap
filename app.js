@@ -90,6 +90,18 @@ io.of('/vcc').on('connection', function (socket) {
         socket.cconeClient.changeWrapupMode(data);
     });
 
+    socket.on('agents_info', function(data){
+        socket.cconeClient.agentsInfo(data);
+    });
+
+    socket.on('ivrs_info', function(data){
+        socket.cconeClient.ivrsInfo(data);
+    });
+
+    socket.on('queues_info', function(data){
+        socket.cconeClient.queuesInfo(data);
+    });
+
     socket.on('disconnect', function () {
         if (socket.cconeClient == undefined) return;
 

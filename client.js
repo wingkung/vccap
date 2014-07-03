@@ -13,6 +13,7 @@ exports.Client = function (params) {
 
     this.left = "";
     this.timer = null;
+
     var self = this;
 
     this.send = function (action, msg) {
@@ -81,7 +82,6 @@ exports.Client = function (params) {
             if (args.length > 2) {
                 self.subState = args[2];
             }
-            self.stateDescr
             self.broadcast(self.sockets, 'state', {state: self.state, subState: self.subState, stateDescr: self.stateDescr })
         } else if (args[0] == "InitAgent") {
             console.log(args);
@@ -112,7 +112,113 @@ exports.Client = function (params) {
             }else{
                 self.broadcast(self.sockets, 'logout', {descr: '登出失败'});
             }
+        } else if (args[0] == "AgentsInfo"){
+            self.onAgentsInfo(args[1]);
+        } else if (args[0] == "ServicesInfo"){
+            self.onIvrsInfo(args[1]);
+        } else if (args[0] == 'SkillGroupsInfo'){
+            self.onQueuesInfo(args[1]);
+        } else if (args[0] == "Dial"){
+            var rtn = (args[1] == "1");
+            var descr = "呼叫" + (rtn ? "成功" : "失败");
+            self.broadcast(self.sockets, 'dial', {rtn:rtn, descr: descr});
+        }else if (args[0] == "Hold"){
+            var rtn = args[1] == "1";
+            var descr = "保持" + rtn ? "成功" : "失败";
+            self.broadcast(self.sockets, 'hold', {rtn:rtn, descr: descr});
+        }else if (args[0] == "UnHold"){
+            var rtn = args[1] == "1";
+            var descr = "取消" + rtn ? "成功" : "失败";
+            self.broadcast(self.sockets, 'unhold', {rtn:rtn, descr: descr});
+        }else if (args[0] == "Consult"){
+            var rtn = args[1] == "1";
+            var descr = "咨询" + rtn ? "成功" : "失败";
+            self.broadcast(self.sockets, 'consult', {rtn:rtn, descr: descr});
+        } else if (args[0] == "ConsultCancel"){
+            var rtn = args[1] == "1";
+            var descr = "取消" + rtn ? "成功" : "失败";
+            self.broadcast(self.sockets, 'consult_cancel', {rtn:rtn, descr: descr});
+        }else if (args[0] == "ConsultTransfer"){
+            var rtn = args[1] == "1";
+            var descr = "转移" + rtn ? "成功" : "失败";
+            self.broadcast(self.sockets, 'consult_transfer', {rtn:rtn, descr: descr});
+        }else if (args[0] == "ConsultBridge"){
+            var rtn = args[1] == "1";
+            var descr = "三方" + rtn ? "成功" : "失败";
+            self.broadcast(self.sockets, 'consult_bridge', {rtn:rtn, descr: descr});
+        }else if (args[0] == "Transfer"){
+            var rtn = args[1] == "1";
+            var descr = "转移" + rtn ? "成功" : "失败";
+            self.broadcast(self.sockets, 'transfer', {rtn:rtn, descr: descr});
+        }else if(args[0] == "UserIn"){
+            var data = {};
+            for (var i in args) {
+                if (i == 0) continue;
+                if (args.hasOwnProperty(i)) {
+                    var kv = args[i].split('=');
+                    if (kv[0] == 'Caller') {
+                        data.caller = kv[1];
+                    } else if (kv[0] == 'Callee') {
+                        var arr = kv[1].split('#');
+                        data.callee = arr[0];
+                        data.sessionId = arr[1];
+                        data.sessionType = arr[2];
+                    }
+                }
+            }
+            self.broadcast(self.sockets, 'userin', data);
         }
+    };
+
+    this.onQueuesInfo = function(info){
+        if (self.lastQueuesInfoTime == null){
+            self.lastQueuesInfoTime = new Date().getTime();
+        }
+        if (self.queues == null || new Date().getTime() - self.lastQueuesInfoTime > 60000){
+            self.queues = [];
+            var arr = info.split('&');
+            for (var i in arr){
+                var line = arr[i];
+                var arr1 = line.split(':');
+                var queue = {queueId: arr1[0], name: arr1[1]};
+                self.queues.push(queue);
+            }
+        }
+        self.broadcast(self.sockets, 'queues_info', self.queues);
+    };
+
+    this.onIvrsInfo = function(info){
+        if (self.lastIvrsInfoTime == null){
+            self.lastIvrsInfoTime = new Date().getTime();
+        }
+        if (self.ivrs == null || new Date().getTime() - self.lastIvrsInfoTime > 60000){
+            self.ivrs = [];
+            var arr = info.split('&');
+            for (var i in arr){
+                var line = arr[i];
+                var arr1 = line.split(':');
+                var ivr = {ivrId: arr1[0], name: arr1[1]};
+                self.ivrs.push(ivr);
+            }
+        }
+        self.broadcast(self.sockets, 'ivrs_info', self.ivrs);
+    };
+
+    this.onAgentsInfo = function(info){
+        if (self.lastAgentsInfoTime == null){
+            self.lastAgentsInfoTime = new Date().getTime();
+        }
+        if (self.agents == null || new Date().getTime() - self.lastAgentsInfoTime > 3000){
+            self.agents = [];
+            var arr = info.split('&');
+            for (var i in arr){
+                var line = arr[i];
+                var arr1 = line.split(':');
+                var agent = {agentId: arr1[0], state:arr1[1], stateDescr: translateState(arr1[1]), name: arr1[2], ext: arr1[3]};
+                self.agents.push(agent);
+            }
+        }
+        self.broadcast(self.sockets, 'agents_info', self.agents);
     };
 
     this.onScene = function (data) {
@@ -183,6 +289,16 @@ exports.Client = function (params) {
 
     this.changeAdminMode = function (data) {
         self.send('AdminMode', data.mode);
+    };
+
+    this.agentsInfo = function(data){
+        self.send('AgentsInfo', '');
+    };
+    this.ivrsInfo = function(data){
+        self.send('ServicesInfo', '');
+    };
+    this.queuesInfo = function(data){
+        self.send('SkillGroupsInfo', '');
     };
 
     this.destroy = function () {
