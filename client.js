@@ -124,31 +124,31 @@ exports.Client = function (params) {
             self.broadcast(self.sockets, 'dial', {rtn:rtn, descr: descr});
         }else if (args[0] == "Hold"){
             var rtn = args[1] == "1";
-            var descr = "保持" + rtn ? "成功" : "失败";
+            var descr = "保持" + (rtn ? "成功" : "失败");
             self.broadcast(self.sockets, 'hold', {rtn:rtn, descr: descr});
         }else if (args[0] == "UnHold"){
             var rtn = args[1] == "1";
-            var descr = "取消" + rtn ? "成功" : "失败";
+            var descr = "取消" + (rtn ? "成功" : "失败");
             self.broadcast(self.sockets, 'unhold', {rtn:rtn, descr: descr});
         }else if (args[0] == "Consult"){
             var rtn = args[1] == "1";
-            var descr = "咨询" + rtn ? "成功" : "失败";
+            var descr = "咨询" + (rtn ? "成功" : "失败");
             self.broadcast(self.sockets, 'consult', {rtn:rtn, descr: descr});
         } else if (args[0] == "ConsultCancel"){
             var rtn = args[1] == "1";
-            var descr = "取消" + rtn ? "成功" : "失败";
+            var descr = "取消" + (rtn ? "成功" : "失败");
             self.broadcast(self.sockets, 'consult_cancel', {rtn:rtn, descr: descr});
         }else if (args[0] == "ConsultTransfer"){
             var rtn = args[1] == "1";
-            var descr = "转移" + rtn ? "成功" : "失败";
+            var descr = "转移" + (rtn ? "成功" : "失败");
             self.broadcast(self.sockets, 'consult_transfer', {rtn:rtn, descr: descr});
         }else if (args[0] == "ConsultBridge"){
             var rtn = args[1] == "1";
-            var descr = "三方" + rtn ? "成功" : "失败";
+            var descr = "三方" + (rtn ? "成功" : "失败");
             self.broadcast(self.sockets, 'consult_bridge', {rtn:rtn, descr: descr});
         }else if (args[0] == "Transfer"){
             var rtn = args[1] == "1";
-            var descr = "转移" + rtn ? "成功" : "失败";
+            var descr = "转移" + (rtn ? "成功" : "失败");
             self.broadcast(self.sockets, 'transfer', {rtn:rtn, descr: descr});
         }else if(args[0] == "UserIn"){
             var data = {};

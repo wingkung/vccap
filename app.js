@@ -12,7 +12,7 @@ server.listen(port, function () {
 });
 
 app.use(express, function () {
-    express.static(__dirname + '/public')
+    express.static(require('path').join(__dirname, 'public'))
 });
 
 io.of('/vcc').on('connection', function (socket) {
