@@ -7,13 +7,21 @@ var ac = require('./client');
 
 var port = process.env.PORT || 3000;
 
-server.listen(port, function () {
-    console.log('Server listening at port %d', port);
-});
 
 app.use(express, function () {
     express.static(require('path').join(__dirname, 'public'))
 });
+
+
+app.get('/', function(req, res){
+    res.send('index.html');
+})
+
+server.listen(port, function () {
+    console.log('Server listening at port %d', port);
+});
+
+
 
 io.of('/vcc').on('connection', function (socket) {
 
