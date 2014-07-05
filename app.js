@@ -5,23 +5,13 @@ var io = require('socket.io')(server);
 
 var ac = require('./client');
 
-var port = process.env.PORT || 3000;
+var port = 3000;
 
-
-app.use(express, function () {
-    express.static(require('path').join(__dirname, 'public'))
-});
-
-
-app.get('/', function(req, res){
-    res.send('index.html');
-})
+app.use(express.static(__dirname + '/public'));
 
 server.listen(port, function () {
     console.log('Server listening at port %d', port);
 });
-
-
 
 io.of('/vcc').on('connection', function (socket) {
 
