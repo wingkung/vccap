@@ -21,7 +21,7 @@ exports.Client = function (params) {
         self.netSocket.write(action + ',' + self.tenantId + ',' + self.agentId + ',' + msg + '\r\n');
     };
     this.init = function () {
-        self.netSocket = net.connect({port: 14600, host: self.host}, function () {
+        self.netSocket = net.connect({port: 14601, host: self.host}, function () {
             var md5 = require('crypto').createHash('md5');
             md5.update(self.password);
             self.send('Login', md5.digest("hex") + ',' + self.ext + ',N');
